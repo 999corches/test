@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mobile Datenbank-Verwaltung</title>
     <style>
-        /* Grundlegendes Styling */
         * {
             box-sizing: border-box;
             margin: 0;
@@ -29,6 +28,7 @@
         #scanner {
             width: 100%;
             max-width: 400px;
+            height: 300px; /* Feste Höhe, um den Scanner sichtbar zu machen */
             border: 2px solid #4CAF50;
             border-radius: 10px;
             overflow: hidden;
@@ -79,32 +79,50 @@
 <body>
     <h1>Barcode scannen und Daten abrufen</h1>
     
-    <!-- Barcode-Scanner-Bereich -->
-    <div id="scanner"></div>
+    <!-- Bereich für Barcode-Scanner -->
+    <div id="scanner">Wird geladen...</div>
     
-    <!-- Scan-Ergebnis anzeigen -->
+    <!-- Ergebnis des Scans -->
     <div id="result">Ergebnis: <span id="barcodeResult">Noch kein Scan</span></div>
 
-    <!-- Editor für die Bearbeitung -->
+    <!-- Editor für Datenbearbeitung -->
     <div id="editor">
         <input type="text" id="editField" placeholder="Wert bearbeiten" />
         <button onclick="saveData()">Speichern</button>
     </div>
 
-    <!-- Einbindung des Barcode-Scanners -->
+    <!-- Barcode-Scanner-Bibliothek -->
     <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
     <script>
-        // Funktion für erfolgreichen Barcode-Scan
+        // Funktion, die bei einem erfolgreichen Scan aufgerufen wird
         function onScanSuccess(decodedText) {
             document.getElementById("barcodeResult").innerText = decodedText;
-            fetchData(decodedText); // Daten von der Datenbank abrufen
+            fetchData(decodedText); // Daten aus der Datenbank abrufen
         }
 
-        // Barcode-Scanner-Setup
-        let html5QrcodeScanner = new Html5QrcodeScanner("scanner", { fps: 10, qrbox: 250 });
-        html5QrcodeScanner.render(onScanSuccess);
+        // Fehlerbehandlung beim Barcode-Scanner
+        function onScanError(errorMessage) {
+            console.warn("Scan-Fehler:", errorMessage);
+        }
 
-        // Funktion zum Abrufen der Daten aus der Datenbank
+        // Barcode-Scanner-Initialisierung
+        function initScanner() {
+            const scannerContainer = document.getElementById("scanner");
+            const html5QrcodeScanner = new Html5Qrcode(scannerContainer);
+
+            // Kamera aktivieren und den Scanner rendern
+            html5QrcodeScanner.start(
+                { facingMode: "environment" }, // Rückkamera des Handys verwenden
+                { fps: 10, qrbox: 250 },
+                onScanSuccess,
+                onScanError
+            ).catch(err => {
+                console.error("Kamera konnte nicht gestartet werden:", err);
+                scannerContainer.innerHTML = "<p>Kamera konnte nicht geladen werden. Bitte Berechtigungen prüfen.</p>";
+            });
+        }
+
+        // Daten von der API abrufen
         async function fetchData(barcode) {
             try {
                 const response = await fetch(`https://your-api-url.com/items/${barcode}`);
@@ -121,7 +139,7 @@
             }
         }
 
-        // Funktion zum Speichern der geänderten Daten
+        // Geänderte Daten speichern
         async function saveData() {
             const updatedValue = document.getElementById("editField").value;
             const barcode = document.getElementById("barcodeResult").innerText;
@@ -142,6 +160,9 @@
                 alert("Es gab ein Problem beim Speichern der Daten.");
             }
         }
+
+        // Scanner initialisieren, wenn Seite geladen ist
+        window.onload = initScanner;
     </script>
 </body>
 </html>
